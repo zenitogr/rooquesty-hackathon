@@ -34,7 +34,11 @@ const ReactionStream = ({ itemId }: { itemId: string }) => {
       <ul>
         {reactions.map((reaction) => (
           <li key={reaction.id} className="mb-2">
-            {reaction.content}
+            {reaction.type === 'image' ? (
+              <img src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/reaction_images/${reaction.content}`} alt="Reaction" className="max-w-xs" />
+            ) : (
+              reaction.content
+            )}
           </li>
         ))}
       </ul>

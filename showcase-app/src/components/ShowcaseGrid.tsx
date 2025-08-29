@@ -40,14 +40,26 @@ const ShowcaseGrid = () => {
     fetchData();
   }, []);
 
+  const [numCols, setNumCols] = useState(1);
+
+  useEffect(() => {
+    const calculateNumCols = () => {
+      const newNumCols = Math.floor(window.innerWidth / 320);
+      setNumCols(newNumCols > 0 ? newNumCols : 1);
+    };
+
+    calculateNumCols();
+    window.addEventListener('resize', calculateNumCols);
+    return () => window.removeEventListener('resize', calculateNumCols);
+  }, []);
+
   const columns = useMemo(() => {
-    const numCols = Math.floor(window.innerWidth / 320);
-    const cols = Array.from({ length: numCols > 0 ? numCols : 1 }, () => []) as any[][];
+    const cols = Array.from({ length: numCols }, () => []) as any[][];
     items.forEach((item, i) => {
-      cols[i % (numCols > 0 ? numCols : 1)].push(item);
+      cols[i % numCols].push(item);
     });
     return cols;
-  }, [items]);
+  }, [items, numCols]);
 
   return (
     <div className="w-full h-screen overflow-hidden">
