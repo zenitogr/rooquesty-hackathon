@@ -38,7 +38,7 @@ const GridColumn = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className={cn('flex flex-col gap-4', !isHovered && animationClassName)} style={{ animationDuration: `${duration}s`}}>
+      <div className={cn('flex flex-col gap-4', animationClassName, isHovered && 'animation-paused')} style={{ animationDuration: `${duration}s`}}>
         {children}
         {children}
       </div>
