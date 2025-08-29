@@ -1,5 +1,5 @@
 export const getCatMeme = async (text: string) => {
-  const response = await fetch(`https://cataas.com/cat/says/${text}`);
+  const response = await fetch(`https://cataas.com/cat/says/${text}?${Math.random()}`);
   return response.url;
 };
 
@@ -10,15 +10,15 @@ export const getBabyYodaMemes = async (limit: number = 10) => {
 };
 
 export const getDadJokes = async (limit: number = 10) => {
-  const jokes = [];
-  for (let i = 0; i < limit; i++) {
+  const jokes = new Set<string>();
+  while (jokes.size < limit) {
     const response = await fetch('https://icanhazdadjoke.com/', {
       headers: {
         'Accept': 'application/json'
       }
     });
     const data = await response.json();
-    jokes.push(data.joke);
+    jokes.add(data.joke);
   }
-  return jokes;
+  return Array.from(jokes);
 };

@@ -19,22 +19,35 @@ const ShowcaseGrid = () => {
     const fetchData = async () => {
       const { data: dbItems, error } = await supabase.from('items').select('*');
 
-      if (dbItems && dbItems.length > 0) {
-        setItems(dbItems);
-      } else {
-        const catMemes = await Promise.all([getCatMeme('Hello'), getCatMeme('World'), getCatMeme('LFG'), getCatMeme('Roo')]);
-        const babyYodaMemes = await getBabyYodaMemes(4);
-        const dadJokes = await getDadJokes(4);
+      let currentItems = dbItems || [];
 
-        const allItems = [
-          ...catMemes.map((url: string) => ({ type: 'cat_meme', content_url: url })),
-          ...babyYodaMemes.map((url: string) => ({ type: 'baby_yoda_meme', content_url: url })),
-          ...dadJokes.map((joke: string) => ({ type: 'dad_joke', text_content: joke })),
-        ].sort(() => Math.random() - 0.5);
+      if (currentItems.length < 20) {
+        const existingUrls = new Set(currentItems.map(i => i.content_url).filter(Boolean));
+        const existingJokes = new Set(currentItems.map(i => i.text_content).filter(Boolean));
 
-        await supabase.from('items').insert(allItems);
-        setItems(allItems);
+        const newCatPromises = [];
+        for(let i=0; i<5; i++) newCatPromises.push(getCatMeme(`cat-${Math.random()}`));
+        const catMemes = await Promise.all(newCatPromises);
+
+        const babyYodaMemes = await getBabyYodaMemes(10);
+        const dadJokes = await getDadJokes(10);
+
+        const newItems = [
+          ...catMemes.filter(url => !existingUrls.has(url)).map((url: string) => ({ type: 'cat_meme', content_url: url })),
+          ...babyYodaMemes.filter((url: string) => !existingUrls.has(url)).map((url: string) => ({ type: 'baby_yoda_meme', content_url: url })),
+          ...dadJokes.filter(joke => !existingJokes.has(joke)).map((joke: string) => ({ type: 'dad_joke', text_content: joke })),
+        ];
+        
+        const uniqueNewItems = Array.from(new Map(newItems.map(item => [item.content_url || item.text_content, item])).values());
+
+        if (uniqueNewItems.length > 0) {
+          await supabase.from('items').insert(uniqueNewItems);
+          const { data: newDbItems } = await supabase.from('items').select('*');
+          currentItems = newDbItems || [];
+        }
       }
+      
+      setItems(currentItems.sort(() => Math.random() - 0.5));
     };
 
     fetchData();
@@ -54,6 +67,9 @@ const ShowcaseGrid = () => {
   }, []);
 
   const columns = useMemo(() => {
+    if (numCols === 0) {
+      return [];
+    }
     const cols = Array.from({ length: numCols }, () => []) as any[][];
     items.forEach((item, i) => {
       cols[i % numCols].push(item);

@@ -1,0 +1,1 @@
+alter table reactions replica identity full;
