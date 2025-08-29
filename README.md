@@ -29,4 +29,6 @@ Results:
 
 Got it! cat and baby yoda memes and dad jokes all the way to LFG!
 
+![LFG](https://github.com/user-attachments/assets/83698204-05d1-490c-a3d5-5eb786ad29a1)
+
 ![LFG](https://github.com/user-attachments/assets/7c4d3a42-8bbf-438d-83d3-c2f797110903)
