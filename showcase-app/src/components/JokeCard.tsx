@@ -6,8 +6,8 @@ interface JokeCardProps {
 
 const JokeCard: React.FC<JokeCardProps> = ({ joke }) => {
   return (
-    <div className="rounded-lg overflow-hidden shadow-lg p-4 bg-white">
-      <p className="text-gray-800">{joke}</p>
+    <div className="rounded-lg overflow-hidden shadow-lg p-6 bg-zinc-800 text-white">
+      <p className="text-lg leading-relaxed">{joke}</p>
     </div>
   );
 };

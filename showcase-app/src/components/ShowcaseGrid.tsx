@@ -27,17 +27,17 @@ const ShowcaseGrid = () => {
   }, []);
 
   const columns = useMemo(() => {
-    const cols = [[], [], []] as any[][];
+    const numCols = 7;
+    const cols = Array.from({ length: numCols }, () => []) as any[][];
     items.forEach((item, i) => {
-      cols[i % 3].push(item);
+      cols[i % numCols].push(item);
     });
     return cols;
   }, [items]);
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Showcase Grid</h1>
-      <div className="grid grid-cols-5 gap-4">
+    <div className="w-full h-screen overflow-hidden">
+      <div className="grid grid-cols-7 gap-2">
         {columns.map((col, i) => (
           <GridColumn key={i} msPerPixel={20 + i * 5} direction={i % 2 === 0 ? 'down' : 'up'}>
             {col.map((item, index) =>
