@@ -1,6 +1,5 @@
-
 import { cn } from '@/lib/utils';
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useState, useRef, useEffect } from 'react';
 
 type GridColumnProps = {
   children: ReactNode;
@@ -12,33 +11,74 @@ type GridColumnProps = {
 const GridColumn = ({
   children,
   className,
-  msPerPixel = 0,
+  msPerPixel = 20,
   direction = 'up',
 }: GridColumnProps) => {
-  const [columnRef, setColumnRef] = useState<HTMLDivElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const scrollTopRef = useRef(0);
+  const animationFrameRef = useRef<number | null>(null);
   const [isHovered, setIsHovered] = useState(false);
 
-  const duration = columnRef
-    ? (columnRef.offsetHeight * msPerPixel) / 1000
-    : 0;
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
 
-  const animationClassName = direction === 'up' ? 'animate-scroll-up' : 'animate-scroll-down';
+    let scrollHeight = 0;
+
+    const scrollLoop = () => {
+      if (scrollHeight === 0) {
+        scrollHeight = content.offsetHeight / 2;
+      }
+
+      if (!isHovered && scrollHeight > 0) {
+        const pixelsPerFrame = 16.67 / msPerPixel;
+        
+        if (direction === 'down') {
+          scrollTopRef.current = (scrollTopRef.current + pixelsPerFrame) % scrollHeight;
+        } else {
+          scrollTopRef.current = (scrollTopRef.current - pixelsPerFrame + scrollHeight) % scrollHeight;
+        }
+      }
+      
+      if (content) {
+        content.style.transform = `translateY(${-scrollTopRef.current}px)`;
+      }
+
+      animationFrameRef.current = requestAnimationFrame(scrollLoop);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(scrollLoop);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isHovered, msPerPixel, direction]);
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (isHovered && contentRef.current) {
+      e.preventDefault();
+      const scrollHeight = contentRef.current.offsetHeight / 2;
+      
+      scrollTopRef.current += e.deltaY;
+
+      if (scrollHeight > 0) {
+        scrollTopRef.current = Math.max(0, Math.min(scrollTopRef.current, scrollHeight));
+      }
+    }
+  };
 
   return (
     <div
-      ref={setColumnRef}
-      className={cn(
-        'flex flex-col gap-4 min-w-[300px]',
-        className
-      )}
-      style={{
-        '--animation-duration': `${duration}s`,
-        '--animation-direction': direction === 'up' ? 'normal' : 'reverse',
-      } as React.CSSProperties}
+      ref={viewportRef}
+      className={cn('h-full overflow-hidden', className)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onWheel={handleWheel}
     >
-      <div className={cn('flex flex-col gap-4', animationClassName, isHovered && 'animation-paused')} style={{ animationDuration: `${duration}s`}}>
+      <div ref={contentRef} className="flex flex-col gap-4">
         {children}
         {children}
       </div>
