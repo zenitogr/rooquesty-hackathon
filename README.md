@@ -28,3 +28,5 @@ Results:
 - I propose to share cat and baby yoda memes to attract the youth and dad jokes for the boomers!
 
 Got it! cat and baby yoda memes and dad jokes all the way to LFG!
+
+<img width="3817" height="2082" alt="image" src="https://github.com/user-attachments/assets/d0d6ce7d-113e-4ee5-a730-c2fe9d043c51" />
