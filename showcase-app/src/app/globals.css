@@ -150,3 +150,9 @@
 .animation-paused {
   animation-play-state: paused;
 }
+
+@layer utilities {
+  .grid-cols-auto-fit-300 {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+}

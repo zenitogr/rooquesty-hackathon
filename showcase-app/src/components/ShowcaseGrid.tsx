@@ -13,7 +13,6 @@ import ReactionInput from './ReactionInput';
 
 const ShowcaseGrid = () => {
   const [items, setItems] = useState<any[]>([]);
-  const [numCols, setNumCols] = useState(7);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
 
   useEffect(() => {
@@ -28,7 +27,7 @@ const ShowcaseGrid = () => {
         const dadJokes = await getDadJokes(4);
 
         const allItems = [
-          ...catMemes.map(url => ({ type: 'cat_meme', content_url: url })),
+          ...catMemes.map((url: string) => ({ type: 'cat_meme', content_url: url })),
           ...babyYodaMemes.map((url: string) => ({ type: 'baby_yoda_meme', content_url: url })),
           ...dadJokes.map((joke: string) => ({ type: 'dad_joke', text_content: joke })),
         ].sort(() => Math.random() - 0.5);
@@ -41,39 +40,20 @@ const ShowcaseGrid = () => {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    const calculateNumCols = () => {
-      const longestWord = items
-        .filter(item => item.type === 'dad_joke')
-        .reduce((longest: string, item: any) => {
-          const words = item.text_content.split(' ');
-          const currentLongest = words.reduce((l: string, w: string) => w.length > l.length ? w : l, '');
-          return currentLongest.length > longest.length ? currentLongest : longest;
-        }, '');
-
-      const minWidth = longestWord.length * 10 + 48; // 10px per char + padding
-      const newNumCols = Math.floor(window.innerWidth / minWidth);
-      setNumCols(newNumCols > 0 ? newNumCols : 1);
-    };
-
-    calculateNumCols();
-    window.addEventListener('resize', calculateNumCols);
-    return () => window.removeEventListener('resize', calculateNumCols);
-  }, [items]);
-
   const columns = useMemo(() => {
-    const cols = Array.from({ length: numCols }, () => []) as any[][];
+    const numCols = Math.floor(window.innerWidth / 320);
+    const cols = Array.from({ length: numCols > 0 ? numCols : 1 }, () => []) as any[][];
     items.forEach((item, i) => {
-      cols[i % numCols].push(item);
+      cols[i % (numCols > 0 ? numCols : 1)].push(item);
     });
     return cols;
-  }, [items, numCols]);
+  }, [items]);
 
   return (
     <div className="w-full h-screen overflow-hidden">
-      <div className={`grid grid-cols-7 gap-2 ${selectedItem ? 'blur-sm' : ''}`}>
+      <div className={`grid grid-cols-auto-fit-300 gap-2 ${selectedItem ? 'blur-sm' : ''}`}>
         {columns.map((col, i) => (
-          <GridColumn key={i} msPerPixel={20 + i * 5} direction={i % 2 === 0 ? 'down' : 'up'}>
+          <GridColumn key={i} msPerPixel={20 + (i % 3) * 5} direction={i % 2 === 0 ? 'down' : 'up'}>
             {col.map((item, index) => (
               <div key={index} onClick={() => setSelectedItem(item)}>
                 {item.type === 'cat_meme' || item.type === 'baby_yoda_meme' ? (
