@@ -27,4 +27,4 @@ Results:
 - we need to revive the hope and passion in people
 - I propose to share cat and baby yoda memes to attract the youth and dad jokes for the boomers!
 
-Go it! cat and baby yoda memes and dad jokes all the way to LFG!
+Got it! cat and baby yoda memes and dad jokes all the way to LFG!
