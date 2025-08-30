@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { getCatMeme, getBabyYodaMemes, getDadJokes } from '@/lib/api';
 import GridColumn from './GridColumn';
 import MemeCard from './MemeCard';
@@ -14,53 +14,76 @@ import ReactionInput from './ReactionInput';
 const ShowcaseGrid = () => {
   const [items, setItems] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
+  const loadingRef = useRef(false);
+  const [numCols, setNumCols] = useState(1);
+  
+  const existingUrlsRef = useRef(new Set<string>());
+  const existingJokesRef = useRef(new Set<string>());
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data: dbItems, error } = await supabase.from('items').select('*');
+  const loadMoreItems = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
 
-      let currentItems = dbItems || [];
+    try {
+      const newCatPromises = Array.from({ length: 5 }).map(() => getCatMeme(existingUrlsRef.current));
+      const catMemes = await Promise.all(newCatPromises);
 
-      if (currentItems.length < 20) {
-        const existingUrls = new Set(currentItems.map(i => i.content_url).filter(Boolean));
-        const existingJokes = new Set(currentItems.map(i => i.text_content).filter(Boolean));
+      const babyYodaMemes = await getBabyYodaMemes(10, existingUrlsRef.current);
+      const dadJokes = await getDadJokes(10, existingJokesRef.current);
 
-        const newCatPromises = [];
-        for(let i=0; i<5; i++) newCatPromises.push(getCatMeme(existingUrls));
-        const catMemes = await Promise.all(newCatPromises);
+      const newItems = [
+        ...catMemes.map((url: string) => ({ type: 'cat_meme', content_url: url })),
+        ...babyYodaMemes.map((url: string) => ({ type: 'baby_yoda_meme', content_url: url })),
+        ...dadJokes.map((joke: string) => ({ type: 'dad_joke', text_content: joke })),
+      ].filter(Boolean);
 
-        const babyYodaMemes = await getBabyYodaMemes(10, existingUrls);
-        const dadJokes = await getDadJokes(10, existingJokes);
+      const uniqueNewItems = newItems.filter(item => {
+        const key = (item as any).content_url || (item as any).text_content;
+        if ((item as any).content_url) {
+          if (existingUrlsRef.current.has(key)) return false;
+          existingUrlsRef.current.add(key);
+        } else {
+          if (existingJokesRef.current.has(key)) return false;
+          existingJokesRef.current.add(key);
+        }
+        return true;
+      });
 
-        const newItems = [
-          ...catMemes.map((url: string) => ({ type: 'cat_meme', content_url: url })),
-          ...babyYodaMemes.map((url: string) => ({ type: 'baby_yoda_meme', content_url: url })),
-          ...dadJokes.map((joke: string) => ({ type: 'dad_joke', text_content: joke })),
-        ];
-        
-        const uniqueNewItems = Array.from(new Map(newItems.map(item => [(item as any).content_url || (item as any).text_content, item])).values());
-
-        const itemsToInsert = uniqueNewItems.filter(item =>
-          (item as any).content_url
-            ? !existingUrls.has((item as any).content_url)
-            : !existingJokes.has((item as any).text_content)
-        );
-
-        if (itemsToInsert.length > 0) {
-          await supabase.from('items').insert(itemsToInsert);
-          const { data: newDbItems } = await supabase.from('items').select('*');
-          currentItems = newDbItems || [];
+      if (uniqueNewItems.length > 0) {
+        const { data: insertedItems, error } = await supabase.from('items').insert(uniqueNewItems).select();
+        if (insertedItems) {
+          setItems(prevItems => {
+            const newItemsMap = new Map(prevItems.map(i => [i.id, i]));
+            insertedItems.forEach(i => newItemsMap.set(i.id, i));
+            return Array.from(newItemsMap.values());
+          });
         }
       }
-      
-      const uniqueItems = Array.from(new Map(currentItems.map(item => [item.content_url || item.text_content, item])).values());
-      setItems(uniqueItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-    };
-
-    fetchData();
+    } finally {
+      loadingRef.current = false;
+    }
   }, []);
 
-  const [numCols, setNumCols] = useState(1);
+  useEffect(() => {
+    const initialLoad = async () => {
+      const { data: dbItems } = await supabase.from('items').select('*').limit(50);
+      
+      let currentItems = dbItems || [];
+
+      currentItems.forEach(item => {
+        if (item.content_url) existingUrlsRef.current.add(item.content_url);
+        if (item.text_content) existingJokesRef.current.add(item.text_content);
+      });
+      
+      setItems(currentItems);
+
+      if (currentItems.length < 50) {
+        await loadMoreItems();
+        await loadMoreItems();
+      }
+    };
+    initialLoad();
+  }, [loadMoreItems]);
 
   useEffect(() => {
     const calculateNumCols = () => {
@@ -74,9 +97,7 @@ const ShowcaseGrid = () => {
   }, []);
 
   const columns = useMemo(() => {
-    if (numCols === 0) {
-      return [];
-    }
+    if (numCols === 0) return [];
     const cols = Array.from({ length: numCols }, () => []) as any[][];
     items.forEach((item, i) => {
       cols[i % numCols].push(item);
@@ -88,7 +109,7 @@ const ShowcaseGrid = () => {
     <div className="w-full h-screen overflow-hidden">
       <div className={`grid grid-cols-auto-fit-300 gap-2 ${selectedItem ? 'blur-sm' : ''}`}>
         {columns.map((col, i) => (
-          <GridColumn key={i} msPerPixel={20 + (i % 3) * 5} direction={i % 2 === 0 ? 'down' : 'up'}>
+          <GridColumn key={i} onLoadMore={loadMoreItems}>
             {col.map((item) => (
               <div key={item.id} onClick={() => setSelectedItem(item)}>
                 {item.type === 'cat_meme' || item.type === 'baby_yoda_meme' ? (
