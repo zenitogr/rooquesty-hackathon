@@ -1,5 +1,14 @@
 import { localCatMemes, localBabyYodaMemes, localDadJokes } from './local-data';
 
+interface ImgflipMeme {
+  id: string;
+  name: string;
+  url: string;
+  width: number;
+  height: number;
+  box_count: number;
+}
+
 const shuffle = <T>(array: T[]): T[] => {
   let currentIndex = array.length, randomIndex;
   while (currentIndex !== 0) {
@@ -10,30 +19,23 @@ const shuffle = <T>(array: T[]): T[] => {
   return array;
 };
 
-const shuffledCatMemes = shuffle([...localCatMemes]);
-const shuffledBabyYodaMemes = shuffle([...localBabyYodaMemes]);
+export const getImgflipMemes = async (count: number): Promise<string[]> => {
+  try {
+    const response = await fetch('https://api.imgflip.com/get_memes');
+    const data = await response.json();
+    if (data.success) {
+      const memes: ImgflipMeme[] = data.data.memes;
+      return shuffle(memes).slice(0, count).map(meme => meme.url);
+    }
+  } catch (error) {
+    console.error('Error fetching from Imgflip API:', error);
+  }
+  return [];
+};
+
 const shuffledDadJokes = shuffle([...localDadJokes]);
 
-let catMemeIndex = 0;
-let babyYodaMemeIndex = 0;
 let dadJokeIndex = 0;
-
-export const getCatMeme = async (existingUrls: Set<string>): Promise<string> => {
-  if (catMemeIndex >= shuffledCatMemes.length) catMemeIndex = 0;
-  const meme = shuffledCatMemes[catMemeIndex];
-  catMemeIndex++;
-  return meme;
-};
-
-export const getBabyYodaMemes = async (count: number, existingUrls: Set<string>): Promise<string[]> => {
-  const memes: string[] = [];
-  for (let i = 0; i < count; i++) {
-    if (babyYodaMemeIndex >= shuffledBabyYodaMemes.length) babyYodaMemeIndex = 0;
-    memes.push(shuffledBabyYodaMemes[babyYodaMemeIndex]);
-    babyYodaMemeIndex++;
-  }
-  return memes;
-};
 
 export const getDadJokes = async (count: number, existingJokes: Set<string>): Promise<string[]> => {
   const jokes: string[] = [];

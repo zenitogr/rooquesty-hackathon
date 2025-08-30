@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { getCatMeme, getBabyYodaMemes, getDadJokes } from '@/lib/api';
+import { getImgflipMemes, getDadJokes } from '@/lib/api';
 import GridColumn from './GridColumn';
 import MemeCard from './MemeCard';
 import JokeCard from './JokeCard';
@@ -25,15 +25,11 @@ const ShowcaseGrid = () => {
     loadingRef.current = true;
 
     try {
-      const newCatPromises = Array.from({ length: 5 }).map(() => getCatMeme(existingUrlsRef.current));
-      const catMemes = await Promise.all(newCatPromises);
-
-      const babyYodaMemes = await getBabyYodaMemes(10, existingUrlsRef.current);
+      const imgflipMemes = await getImgflipMemes(15);
       const dadJokes = await getDadJokes(10, existingJokesRef.current);
 
       const newItems = [
-        ...catMemes.map((url: string) => ({ type: 'cat_meme', content_url: url })),
-        ...babyYodaMemes.map((url: string) => ({ type: 'baby_yoda_meme', content_url: url })),
+        ...imgflipMemes.map((url: string) => ({ type: 'meme', content_url: url })),
         ...dadJokes.map((joke: string) => ({ type: 'dad_joke', text_content: joke })),
       ].filter(Boolean);
 
@@ -112,7 +108,7 @@ const ShowcaseGrid = () => {
           <GridColumn key={i} onLoadMore={loadMoreItems} direction={i % 2 === 0 ? 'down' : 'up'}>
             {col.map((item) => (
               <div key={item.id} onClick={() => setSelectedItem(item)}>
-                {item.type === 'cat_meme' || item.type === 'baby_yoda_meme' ? (
+                {item.type === 'meme' ? (
                   <MemeCard imageUrl={item.content_url} />
                 ) : (
                   <JokeCard joke={item.text_content} />
@@ -125,7 +121,7 @@ const ShowcaseGrid = () => {
       <FullscreenModal isOpen={!!selectedItem} onClose={() => setSelectedItem(null)}>
         {selectedItem && (
           <div>
-            {selectedItem.type === 'cat_meme' || selectedItem.type === 'baby_yoda_meme' ? (
+            {selectedItem.type === 'meme' ? (
               <img src={selectedItem.content_url} alt="Meme" className="w-full h-auto max-h-[70vh] object-contain" />
             ) : (
               <div className="p-8 bg-zinc-900 rounded-lg">
