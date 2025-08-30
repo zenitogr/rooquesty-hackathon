@@ -61,12 +61,22 @@ const GridColumn = ({
     };
   }, [scrollLoop]);
 
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (contentRef.current) {
+      const scrollHeight = contentRef.current.offsetHeight / 2;
+      scrollTopRef.current += e.deltaY;
+      scrollTopRef.current = Math.max(0, Math.min(scrollTopRef.current, scrollHeight));
+      contentRef.current.style.transform = `translateY(${-scrollTopRef.current}px)`;
+    }
+  };
+
   return (
     <div
       ref={viewportRef}
       className={cn('h-screen overflow-hidden', className)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onWheel={handleWheel}
     >
       <div ref={contentRef} className="flex flex-col gap-4 p-2">
         {children}

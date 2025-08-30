@@ -109,7 +109,7 @@ const ShowcaseGrid = () => {
     <div className="w-full h-screen overflow-hidden">
       <div className={`grid grid-cols-auto-fit-300 gap-2 ${selectedItem ? 'blur-sm' : ''}`}>
         {columns.map((col, i) => (
-          <GridColumn key={i} onLoadMore={loadMoreItems}>
+          <GridColumn key={i} onLoadMore={loadMoreItems} direction={i % 2 === 0 ? 'down' : 'up'}>
             {col.map((item) => (
               <div key={item.id} onClick={() => setSelectedItem(item)}>
                 {item.type === 'cat_meme' || item.type === 'baby_yoda_meme' ? (
