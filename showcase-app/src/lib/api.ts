@@ -1,12 +1,15 @@
-import { localCatMemes, localBabyYodaMemes, localDadJokes } from './local-data';
+import { localDadJokes } from './local-data';
 
-interface ImgflipMeme {
-  id: string;
-  name: string;
+interface MemeApiResponseMeme {
+  postLink: string;
+  subreddit: string;
+  title: string;
   url: string;
-  width: number;
-  height: number;
-  box_count: number;
+  nsfw: boolean;
+  spoiler: boolean;
+  author: string;
+  ups: number;
+  preview: string[];
 }
 
 const shuffle = <T>(array: T[]): T[] => {
@@ -19,18 +22,35 @@ const shuffle = <T>(array: T[]): T[] => {
   return array;
 };
 
-export const getImgflipMemes = async (count: number): Promise<string[]> => {
+export const getCategorizedMemes = async (count: number, existingUrls: Set<string>): Promise<string[]> => {
+  const catMemesUrl = 'https://meme-api.com/gimme/Catmemes/50';
+  const babyYodaMemesUrl = 'https://meme-api.com/gimme/BabyYodaMemes/50';
+
   try {
-    const response = await fetch('https://api.imgflip.com/get_memes');
-    const data = await response.json();
-    if (data.success) {
-      const memes: ImgflipMeme[] = data.data.memes;
-      return shuffle(memes).slice(0, count).map(meme => meme.url);
+    const [catResponse, babyYodaResponse] = await Promise.all([
+      fetch(catMemesUrl),
+      fetch(babyYodaMemesUrl)
+    ]);
+
+    const catData = await catResponse.json();
+    const babyYodaData = await babyYodaResponse.json();
+
+    const allMemes: MemeApiResponseMeme[] = [];
+
+    if (catData.memes) {
+      allMemes.push(...catData.memes);
     }
+    if (babyYodaData.memes) {
+      allMemes.push(...babyYodaData.memes);
+    }
+
+    const newMemes = shuffle(allMemes).filter(meme => !existingUrls.has(meme.url));
+    
+    return newMemes.slice(0, count).map(meme => meme.url);
   } catch (error) {
-    console.error('Error fetching from Imgflip API:', error);
+    console.error('Error fetching from meme-api:', error);
+    return [];
   }
-  return [];
 };
 
 const shuffledDadJokes = shuffle([...localDadJokes]);
@@ -39,10 +59,15 @@ let dadJokeIndex = 0;
 
 export const getDadJokes = async (count: number, existingJokes: Set<string>): Promise<string[]> => {
   const jokes: string[] = [];
-  for (let i = 0; i < count; i++) {
+  let attempts = 0;
+  while (jokes.length < count && attempts < shuffledDadJokes.length) {
     if (dadJokeIndex >= shuffledDadJokes.length) dadJokeIndex = 0;
-    jokes.push(shuffledDadJokes[dadJokeIndex]);
+    const joke = shuffledDadJokes[dadJokeIndex];
+    if (!existingJokes.has(joke)) {
+      jokes.push(joke);
+    }
     dadJokeIndex++;
+    attempts++;
   }
   return jokes;
 };

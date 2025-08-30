@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { getImgflipMemes, getDadJokes } from '@/lib/api';
+import { getCategorizedMemes, getDadJokes } from '@/lib/api';
 import GridColumn from './GridColumn';
 import MemeCard from './MemeCard';
 import JokeCard from './JokeCard';
@@ -20,12 +20,12 @@ const ShowcaseGrid = () => {
   const existingUrlsRef = useRef(new Set<string>());
   const existingJokesRef = useRef(new Set<string>());
 
-  const loadMoreItems = useCallback(async () => {
+  const loadMoreItems = useCallback(async (direction: 'up' | 'down' = 'down') => {
     if (loadingRef.current) return;
     loadingRef.current = true;
 
     try {
-      const imgflipMemes = await getImgflipMemes(15);
+      const imgflipMemes = await getCategorizedMemes(15, existingUrlsRef.current);
       const dadJokes = await getDadJokes(10, existingJokesRef.current);
 
       const newItems = [
@@ -46,13 +46,14 @@ const ShowcaseGrid = () => {
       });
 
       if (uniqueNewItems.length > 0) {
-        const { data: insertedItems, error } = await supabase.from('items').insert(uniqueNewItems).select();
+        const { data: insertedItems, error } = await supabase.from('items').upsert(uniqueNewItems, { onConflict: 'content_url, text_content' }).select();
         if (insertedItems) {
-          setItems(prevItems => {
-            const newItemsMap = new Map(prevItems.map(i => [i.id, i]));
-            insertedItems.forEach(i => newItemsMap.set(i.id, i));
-            return Array.from(newItemsMap.values());
-          });
+            setItems(prevItems => {
+                const newItemsMap = new Map(prevItems.map(i => [i.id, i]));
+                insertedItems.forEach(i => newItemsMap.set(i.id, i));
+                const allItems = Array.from(newItemsMap.values());
+                return direction === 'up' ? [...insertedItems, ...prevItems] : [...prevItems, ...insertedItems];
+            });
         }
       }
     } finally {
@@ -72,11 +73,11 @@ const ShowcaseGrid = () => {
       });
       
       setItems(currentItems);
-
+      
       if (currentItems.length < 50) {
-        await loadMoreItems();
-        await loadMoreItems();
+        loadMoreItems();
       }
+
     };
     initialLoad();
   }, [loadMoreItems]);
@@ -105,7 +106,7 @@ const ShowcaseGrid = () => {
     <div className="w-full h-screen overflow-hidden">
       <div className={`grid grid-cols-auto-fit-300 gap-2 ${selectedItem ? 'blur-sm' : ''}`}>
         {columns.map((col, i) => (
-          <GridColumn key={i} onLoadMore={loadMoreItems} direction={i % 2 === 0 ? 'down' : 'up'}>
+          <GridColumn key={i} onLoadMore={(dir) => loadMoreItems(dir)} direction={i % 2 === 0 ? 'down' : 'up'}>
             {col.map((item) => (
               <div key={item.id} onClick={() => setSelectedItem(item)}>
                 {item.type === 'meme' ? (
