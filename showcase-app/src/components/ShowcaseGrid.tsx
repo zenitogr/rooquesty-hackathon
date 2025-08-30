@@ -26,28 +26,35 @@ const ShowcaseGrid = () => {
         const existingJokes = new Set(currentItems.map(i => i.text_content).filter(Boolean));
 
         const newCatPromises = [];
-        for(let i=0; i<5; i++) newCatPromises.push(getCatMeme(`cat-${Math.random()}`));
+        for(let i=0; i<5; i++) newCatPromises.push(getCatMeme(existingUrls));
         const catMemes = await Promise.all(newCatPromises);
 
-        const babyYodaMemes = await getBabyYodaMemes(10);
-        const dadJokes = await getDadJokes(10);
+        const babyYodaMemes = await getBabyYodaMemes(10, existingUrls);
+        const dadJokes = await getDadJokes(10, existingJokes);
 
         const newItems = [
-          ...catMemes.filter(url => !existingUrls.has(url)).map((url: string) => ({ type: 'cat_meme', content_url: url })),
-          ...babyYodaMemes.filter((url: string) => !existingUrls.has(url)).map((url: string) => ({ type: 'baby_yoda_meme', content_url: url })),
-          ...dadJokes.filter(joke => !existingJokes.has(joke)).map((joke: string) => ({ type: 'dad_joke', text_content: joke })),
+          ...catMemes.map((url: string) => ({ type: 'cat_meme', content_url: url })),
+          ...babyYodaMemes.map((url: string) => ({ type: 'baby_yoda_meme', content_url: url })),
+          ...dadJokes.map((joke: string) => ({ type: 'dad_joke', text_content: joke })),
         ];
         
-        const uniqueNewItems = Array.from(new Map(newItems.map(item => [item.content_url || item.text_content, item])).values());
+        const uniqueNewItems = Array.from(new Map(newItems.map(item => [(item as any).content_url || (item as any).text_content, item])).values());
 
-        if (uniqueNewItems.length > 0) {
-          await supabase.from('items').insert(uniqueNewItems);
+        const itemsToInsert = uniqueNewItems.filter(item =>
+          (item as any).content_url
+            ? !existingUrls.has((item as any).content_url)
+            : !existingJokes.has((item as any).text_content)
+        );
+
+        if (itemsToInsert.length > 0) {
+          await supabase.from('items').insert(itemsToInsert);
           const { data: newDbItems } = await supabase.from('items').select('*');
           currentItems = newDbItems || [];
         }
       }
       
-      setItems(currentItems.sort(() => Math.random() - 0.5));
+      const uniqueItems = Array.from(new Map(currentItems.map(item => [item.content_url || item.text_content, item])).values());
+      setItems(uniqueItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
     };
 
     fetchData();
@@ -82,8 +89,8 @@ const ShowcaseGrid = () => {
       <div className={`grid grid-cols-auto-fit-300 gap-2 ${selectedItem ? 'blur-sm' : ''}`}>
         {columns.map((col, i) => (
           <GridColumn key={i} msPerPixel={20 + (i % 3) * 5} direction={i % 2 === 0 ? 'down' : 'up'}>
-            {col.map((item, index) => (
-              <div key={index} onClick={() => setSelectedItem(item)}>
+            {col.map((item) => (
+              <div key={item.id} onClick={() => setSelectedItem(item)}>
                 {item.type === 'cat_meme' || item.type === 'baby_yoda_meme' ? (
                   <MemeCard imageUrl={item.content_url} />
                 ) : (
