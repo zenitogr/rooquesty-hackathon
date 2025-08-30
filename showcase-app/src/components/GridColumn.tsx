@@ -1,59 +1,75 @@
 import { cn } from '@/lib/utils';
-import React, { ReactNode, useRef, useEffect, useCallback } from 'react';
+import React, { ReactNode, useRef, useEffect, useState, useCallback } from 'react';
 
 type GridColumnProps = {
   children: ReactNode;
   className?: string;
   onLoadMore: () => void;
+  direction?: 'up' | 'down';
 };
 
 const GridColumn = ({
   children,
   className,
   onLoadMore,
+  direction = 'up',
 }: GridColumnProps) => {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const scrollTopRef = useRef(0);
+  const animationFrameRef = useRef<number | null>(null);
   const loadMoreRef = useRef(onLoadMore);
   loadMoreRef.current = onLoadMore;
 
-  const handleScroll = useCallback(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    const { scrollTop, scrollHeight, clientHeight } = viewport;
-    if (scrollTop + clientHeight >= scrollHeight - 500) {
-      loadMoreRef.current();
-    }
-  }, []);
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    viewport?.addEventListener('scroll', handleScroll);
-    return () => viewport?.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
+  const scrollLoop = useCallback(() => {
     const content = contentRef.current;
-    if (!viewport || !content) return;
+    if (!content || isHovered) {
+      animationFrameRef.current = requestAnimationFrame(scrollLoop);
+      return;
+    }
 
-    const resizeObserver = new ResizeObserver(() => {
-      const isOverflowing = content.scrollHeight > viewport.clientHeight;
-      if (!isOverflowing) {
+    const scrollHeight = content.offsetHeight / 2;
+    if (scrollHeight === 0) {
+      animationFrameRef.current = requestAnimationFrame(scrollLoop);
+      return;
+    }
+
+    const pixelsPerFrame = 1;
+    if (direction === 'down') {
+      scrollTopRef.current = (scrollTopRef.current + pixelsPerFrame) % scrollHeight;
+      if (scrollTopRef.current >= scrollHeight - viewportRef.current!.clientHeight - 1) {
         loadMoreRef.current();
       }
-    });
+    } else {
+      scrollTopRef.current = (scrollTopRef.current - pixelsPerFrame + scrollHeight) % scrollHeight;
+      if (scrollTopRef.current <= 1) {
+        loadMoreRef.current();
+      }
+    }
+    
+    content.style.transform = `translateY(${-scrollTopRef.current}px)`;
+    animationFrameRef.current = requestAnimationFrame(scrollLoop);
+  }, [isHovered, direction]);
 
-    resizeObserver.observe(content);
-    return () => resizeObserver.disconnect();
-  }, []);
+  useEffect(() => {
+    animationFrameRef.current = requestAnimationFrame(scrollLoop);
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [scrollLoop]);
 
   return (
     <div
       ref={viewportRef}
-      className={cn('h-screen overflow-y-auto', className)}
+      className={cn('h-screen overflow-hidden', className)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <div ref={contentRef} className="flex flex-col gap-4 p-2">
+        {children}
         {children}
       </div>
     </div>

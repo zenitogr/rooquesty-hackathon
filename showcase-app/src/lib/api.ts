@@ -1,41 +1,46 @@
+import { localCatMemes, localBabyYodaMemes, localDadJokes } from './local-data';
+
+const shuffle = <T>(array: T[]): T[] => {
+  let currentIndex = array.length, randomIndex;
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+  }
+  return array;
+};
+
+const shuffledCatMemes = shuffle([...localCatMemes]);
+const shuffledBabyYodaMemes = shuffle([...localBabyYodaMemes]);
+const shuffledDadJokes = shuffle([...localDadJokes]);
+
+let catMemeIndex = 0;
+let babyYodaMemeIndex = 0;
+let dadJokeIndex = 0;
+
 export const getCatMeme = async (existingUrls: Set<string>): Promise<string> => {
-  let url;
-  do {
-    const response = await fetch(`https://cataas.com/cat/says/hello?${Math.random()}`);
-    url = response.url;
-  } while (existingUrls.has(url));
-  return url;
+  if (catMemeIndex >= shuffledCatMemes.length) catMemeIndex = 0;
+  const meme = shuffledCatMemes[catMemeIndex];
+  catMemeIndex++;
+  return meme;
 };
 
-export const getBabyYodaMemes = async (limit: number, existingUrls: Set<string>): Promise<string[]> => {
-  const memes = new Set<string>();
-  let pos = 0;
-  while (memes.size < limit) {
-    const response = await fetch(`https://g.tenor.com/v1/search?q=baby-yoda&key=LIVDSRZULELA&limit=${limit * 2}&pos=${pos}`);
-    const data = await response.json();
-    for (const r of data.results) {
-      const url = r.media[0].gif.url;
-      if (!existingUrls.has(url)) {
-        memes.add(url);
-        if (memes.size >= limit) break;
-      }
-    }
-    pos += data.results.length;
-    if (data.results.length === 0) break;
+export const getBabyYodaMemes = async (count: number, existingUrls: Set<string>): Promise<string[]> => {
+  const memes: string[] = [];
+  for (let i = 0; i < count; i++) {
+    if (babyYodaMemeIndex >= shuffledBabyYodaMemes.length) babyYodaMemeIndex = 0;
+    memes.push(shuffledBabyYodaMemes[babyYodaMemeIndex]);
+    babyYodaMemeIndex++;
   }
-  return Array.from(memes);
+  return memes;
 };
 
-export const getDadJokes = async (limit: number, existingJokes: Set<string>): Promise<string[]> => {
-  const jokes = new Set<string>();
-  while (jokes.size < limit) {
-    const response = await fetch('https://icanhazdadjoke.com/', {
-      headers: { 'Accept': 'application/json' }
-    });
-    const data = await response.json();
-    if (!existingJokes.has(data.joke)) {
-      jokes.add(data.joke);
-    }
+export const getDadJokes = async (count: number, existingJokes: Set<string>): Promise<string[]> => {
+  const jokes: string[] = [];
+  for (let i = 0; i < count; i++) {
+    if (dadJokeIndex >= shuffledDadJokes.length) dadJokeIndex = 0;
+    jokes.push(shuffledDadJokes[dadJokeIndex]);
+    dadJokeIndex++;
   }
-  return Array.from(jokes);
+  return jokes;
 };
